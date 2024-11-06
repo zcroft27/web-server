@@ -7,6 +7,39 @@
 #define PORT 8080
 #define BUFFER_SIZE 1024
 
+void serve_file(int clientfd, const char *filepath) {
+    FILE *file = fopen(filepath, "r");
+     if (file == NULL) {
+        const char *not_found_response =
+            "HTTP/1.1 404 Not Found\r\n"
+            "Content-Type: text/plain\r\n"
+            "Content-Length: 13\r\n"
+            "\r\n"
+            "404 Not Found";
+        write(clientfd, not_found_response, strlen(not_found_response));
+        return;
+    }
+    // Determine file size
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    // Prepare HTTP response headers.
+    char headers[BUFFER_SIZE];
+    snprintf(headers, sizeof(headers),
+             "HTTP/1.1 200 OK\r\n"
+             "Content-Type: text/html\r\n"
+             "Content-Length: %ld\r\n"
+             "\r\n", file_size);
+    write(clientfd, headers, strlen(headers));
+
+    char file_buffer[BUFFER_SIZE];
+    size_t bytes_read;
+    while (bytes_read = fread(file_buffer, 1, BUFFER_SIZE, file) > 0) {
+        write(clientfd, file_buffer, BUFFER_SIZE);
+    }
+}
+
 int main() {
     int server_fd, client_fd;
     struct sockaddr_in address;
@@ -38,20 +71,13 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    // Read request (basic)
     read(client_fd, buffer, BUFFER_SIZE);
     printf("Received request:\n%s\n", buffer);
 
-    // Send a simple HTTP response
-    const char *response =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/plain\r\n"
-        "Content-Length: 13\r\n"
-        "\r\n"
-        "Hello, world!";
-    write(client_fd, response, strlen(response));
+    if (strcmp(buffer, "/") == 0) {
+        serve_file(client_fd, "./index.html");
+    }
 
-    // Close connections
     close(client_fd);
     close(server_fd);
     return 0;
