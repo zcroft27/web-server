@@ -63,7 +63,7 @@ serve_file_args_t dequeue_request() {
     return request;
 }
 
-void serve_file(int clientfd, const char *filepath) {
+void serve_file(int clientfd, char *filepath) {
     FILE *file = fopen(filepath, "r");
     if (file == NULL) {
         const char *not_found_response =
