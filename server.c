@@ -115,6 +115,7 @@ int main() {
 	printf("\nabout to thread\n");
         serve_file_args_t args = {client_fd, path};
         if (threads_available > 0) {
+            threads_available--;
         if (0 != pthread_create(&th, NULL, serve_file_aux, &args)) {
             perror("accept failed");
             close(client_fd);
