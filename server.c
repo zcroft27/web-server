@@ -3,9 +3,15 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
+
+typedef struct {
+    int clientfd;
+    char *filepath;
+} serve_file_args_t;
 
 void serve_file(int clientfd, const char *filepath) {
     FILE *file = fopen(filepath, "r");
@@ -38,6 +44,12 @@ void serve_file(int clientfd, const char *filepath) {
     while (bytes_read = fread(file_buffer, 1, BUFFER_SIZE, file) > 0) {
         write(clientfd, file_buffer, BUFFER_SIZE);
     }
+}
+
+void *serve_file_aux(void *args) {
+    serve_file_args_t *file_args = (serve_file_args_t *) args;
+    
+    serve_file(file_args->clientfd, file_args->filepath);
 }
 
 int main() {
@@ -83,8 +95,18 @@ int main() {
         strcpy(path, "/index.html");
     }
 
-    // Prepend '.' so the file can be served from this directory.
+    pthread_t th;
+
+    // Prepend '.' for filepath in fopen.
     char filepath[256];
+     
+    serve_file_args_t args = {client_fd, filepath};
+
+    if (0 != pthread_create(&th, NULL, serve_file_aux, &args)) {
+        perror("accept failed");
+        exit(EXIT_FAILURE);
+    }
+    
     snprintf(filepath, sizeof(filepath), ".%s", path);
     serve_file(client_fd, filepath);
 
