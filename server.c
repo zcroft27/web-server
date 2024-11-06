@@ -48,6 +48,8 @@ void serve_file(int clientfd, const char *filepath) {
     }
 
     // This thread is done serving, so it is available again. 
+    printf("DONE SERVING! Count: %d\n", threads_available);
+    fflush(stdout);
     threads_available++;
 }
 
