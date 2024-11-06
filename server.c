@@ -48,8 +48,10 @@ void serve_file(int clientfd, const char *filepath) {
 
 void *serve_file_aux(void *args) {
     serve_file_args_t *file_args = (serve_file_args_t *) args;
-    
-    serve_file(file_args->clientfd, file_args->filepath);
+    char* path = file_args->filepath;
+    char* filepath;
+    snprintf(filepath, sizeof(filepath), ".%s", path);
+    serve_file(file_args->clientfd, filepath);
 }
 
 int main() {
@@ -77,38 +79,40 @@ int main() {
     // Listen for connections
     listen(server_fd, 3);
 
-    // Accept a connection
-    if ((client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
-        perror("accept failed");
-        exit(EXIT_FAILURE);
+    while (1) {
+        // Accept a connection
+        if ((client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
+            perror("accept failed");
+            exit(EXIT_FAILURE);
+        }
+
+        read(client_fd, buffer, BUFFER_SIZE);
+        printf("Received request:\n%s\n", buffer);
+
+        // Parse request to determine file
+        char method[16], path[256];
+        sscanf(buffer, "%s %s", method, path);
+
+        // Default to "index.html" if root is requested
+        if (strcmp(path, "/") == 0) {
+            strcpy(path, "/index.html");
+        }
+
+        pthread_t th;
+
+        // Prepend '.' for filepath in fopen.
+        char filepath[256];
+        
+        serve_file_args_t args = {client_fd, filepath};
+
+        if (0 != pthread_create(&th, NULL, serve_file_aux, &args)) {
+            perror("accept failed");
+            close(client_fd);
+            exit(EXIT_FAILURE);
+        } else {
+            pthread_detach(th);
+        }
     }
-
-    read(client_fd, buffer, BUFFER_SIZE);
-    printf("Received request:\n%s\n", buffer);
-
-    // Parse request to determine file
-    char method[16], path[256];
-    sscanf(buffer, "%s %s", method, path);
-
-    // Default to "index.html" if root is requested
-    if (strcmp(path, "/") == 0) {
-        strcpy(path, "/index.html");
-    }
-
-    pthread_t th;
-
-    // Prepend '.' for filepath in fopen.
-    char filepath[256];
-     
-    serve_file_args_t args = {client_fd, filepath};
-
-    if (0 != pthread_create(&th, NULL, serve_file_aux, &args)) {
-        perror("accept failed");
-        exit(EXIT_FAILURE);
-    }
-    
-    snprintf(filepath, sizeof(filepath), ".%s", path);
-    serve_file(client_fd, filepath);
 
     close(client_fd);
     close(server_fd);
