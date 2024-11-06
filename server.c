@@ -89,13 +89,30 @@ void serve_file(int clientfd, const char *filepath) {
              "Content-Type: text/html\r\n"
              "Content-Length: %ld\r\n"
              "\r\n", file_size);
-    write(clientfd, headers, strlen(headers));
 
-    // Send file in chunks.
+    // Write headers to client.         
+    if (write(clientfd, headers, strlen(headers)) < 0) {
+        perror("Error writing headers");
+        fclose(file);
+        free(filepath);
+        close(clientfd);
+        return;
+    }
+
+    // Send file in BUFFER_SIZE sized chunks.
     char file_buffer[BUFFER_SIZE];
     size_t bytes_read;
     while ((bytes_read = fread(file_buffer, 1, BUFFER_SIZE, file)) > 0) {
-        write(clientfd, file_buffer, bytes_read);
+        ssize_t bytes_written = write(clientfd, file_buffer, bytes_read);
+        if (bytes_written < 0) { 
+            // Error writing to client.
+            perror("Error writing file content");
+            break;
+        } else if (bytes_written == 0) {
+            // Client closed connection.
+            printf("Client closed the connection.\n");
+            break;
+        }
     }
 
     fclose(file);
