@@ -74,9 +74,19 @@ int main() {
     read(client_fd, buffer, BUFFER_SIZE);
     printf("Received request:\n%s\n", buffer);
 
-    if (strcmp(buffer, "/") == 0) {
-        serve_file(client_fd, "./index.html");
+    // Parse request to determine file
+    char method[16], path[256];
+    sscanf(buffer, "%s %s", method, path);
+
+    // Default to "index.html" if root is requested
+    if (strcmp(path, "/") == 0) {
+        strcpy(path, "/index.html");
     }
+
+    // Prepend '.' so the file can be served from this directory.
+    char filepath[256];
+    snprintf(filepath, sizeof(filepath), ".%s", path);
+    serve_file(client_fd, filepath);
 
     close(client_fd);
     close(server_fd);
