@@ -7,6 +7,8 @@
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
+int threads_available = 3;
+pthread_mutex_t thread_count_mut = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct {
     int clientfd;
@@ -44,6 +46,9 @@ void serve_file(int clientfd, const char *filepath) {
     while (bytes_read = fread(file_buffer, 1, BUFFER_SIZE, file) > 0) {
         write(clientfd, file_buffer, BUFFER_SIZE);
     }
+
+    // This thread is done serving, so it is available again. 
+    threads_available++;
 }
 
 void *serve_file_aux(void *args) {
@@ -107,12 +112,20 @@ int main() {
         
         serve_file_args_t args = {client_fd, filepath};
 
-        if (0 != pthread_create(&th, NULL, serve_file_aux, &args)) {
+        if (threads_available > 0) {
+            threads_available -= 1;
+            if (0 != pthread_create(&th, NULL, serve_file_aux, &args)) {
             perror("accept failed");
             close(client_fd);
             exit(EXIT_FAILURE);
+            } else {
+                pthread_detach(th);
+            }
         } else {
-            pthread_detach(th);
+        // Serve from main thread if no threads are available.
+        char adjusted_path[256];  
+        snprintf(adjusted_path, sizeof(adjusted_path), ".%s", filepath);
+         serve_file(client_fd, adjusted_path);   
         }
     }
 
