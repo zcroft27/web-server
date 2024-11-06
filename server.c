@@ -114,6 +114,7 @@ int main() {
 
 	printf("\nabout to thread\n");
         serve_file_args_t args = {client_fd, path};
+        if (threads_available > 0) {
         if (0 != pthread_create(&th, NULL, serve_file_aux, &args)) {
             perror("accept failed");
             close(client_fd);
@@ -123,9 +124,7 @@ int main() {
             }
         } else {
         // Serve from main thread if no threads are available.
-        char adjusted_path[256];  
-        snprintf(adjusted_path, sizeof(adjusted_path), ".%s", filepath);
-         serve_file(client_fd, adjusted_path);   
+         serve_file(client_fd, path);   
         }
     }
 
