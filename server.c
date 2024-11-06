@@ -110,8 +110,9 @@ int main() {
             strcpy(path, "/index.html");
         }
 
-        pthread_t th;
-
+    //pthread_t th;
+    serve_file(client_fd, path);
+    /*
 	printf("\nabout to thread\n");
         serve_file_args_t args = {client_fd, path};
         if (threads_available > 0) {
@@ -127,6 +128,7 @@ int main() {
         // Serve from main thread if no threads are available.
          serve_file(client_fd, path);   
         }
+        */
     }
 
     close(client_fd);
