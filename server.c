@@ -48,10 +48,12 @@ void serve_file(int clientfd, const char *filepath) {
 
 void *serve_file_aux(void *args) {
     serve_file_args_t *file_args = (serve_file_args_t *) args;
-    char* path = file_args->filepath;
-    char* filepath;
+    char *path = file_args->filepath;
+    char filepath[256];  
     snprintf(filepath, sizeof(filepath), ".%s", path);
+
     serve_file(file_args->clientfd, filepath);
+    return NULL;
 }
 
 int main() {
