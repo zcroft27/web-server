@@ -15,9 +15,12 @@ typedef struct {
     char *filepath;
 } serve_file_args_t;
 
-void serve_file(int clientfd, const char *filepath) {
+void serve_file(int clientfd, const char *path) {
+    char *filepath = malloc(strlen(path) + 2);
+    snprintf(filepath, strlen(path) + 2, ".%s", path);
+    printf("serving: %s\n", filepath);
     FILE *file = fopen(filepath, "r");
-     if (file == NULL) {
+    if (file == NULL) {
         const char *not_found_response =
             "HTTP/1.1 404 Not Found\r\n"
             "Content-Type: text/plain\r\n"
@@ -25,6 +28,7 @@ void serve_file(int clientfd, const char *filepath) {
             "\r\n"
             "404 Not Found";
         write(clientfd, not_found_response, strlen(not_found_response));
+        free(filepath);
         return;
     }
     // Determine file size
@@ -51,15 +55,14 @@ void serve_file(int clientfd, const char *filepath) {
     printf("DONE SERVING! Count: %d\n", threads_available);
     fflush(stdout);
     threads_available++;
+    free(filepath);
 }
 
 void *serve_file_aux(void *args) {
     serve_file_args_t *file_args = (serve_file_args_t *) args;
-    char *path = file_args->filepath;
-    char filepath[256];  
-    snprintf(filepath, sizeof(filepath), ".%s", path);
+    printf("aux path: %s\n", file_args->filepath);
+    serve_file(file_args->clientfd, file_args->filepath);
 
-    serve_file(file_args->clientfd, filepath);
     return NULL;
 }
 
@@ -109,14 +112,9 @@ int main() {
 
         pthread_t th;
 
-        // Prepend '.' for filepath in fopen.
-        char filepath[256];
-        
-        serve_file_args_t args = {client_fd, filepath};
-
-        if (threads_available > 0) {
-            threads_available -= 1;
-            if (0 != pthread_create(&th, NULL, serve_file_aux, &args)) {
+	printf("\nabout to thread\n");
+        serve_file_args_t args = {client_fd, path};
+        if (0 != pthread_create(&th, NULL, serve_file_aux, &args)) {
             perror("accept failed");
             close(client_fd);
             exit(EXIT_FAILURE);
