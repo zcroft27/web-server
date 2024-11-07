@@ -23,6 +23,11 @@ typedef struct cache_node {
     char bytes[MAX_CACHE_SIZE];
 } cache_node_t;
 
+typedef struct cache_queue {
+    cache_node_t *head;
+    cache_node_t *tail;
+} cache_queue_t;
+
 typedef struct cache_dict_node {
     struct cache_dict_node *next;
     char *key_filepath;
@@ -34,11 +39,6 @@ typedef struct cache_dict {
     cache_dict_node_t *head;
     int count;
 } cache_dict_t;
-
-typedef struct cache_queue {
-    cache_node_t *head;
-    cache_node_t *tail;
-} cache_queue_t;
 
 typedef struct {
     int clientfd;
@@ -67,6 +67,20 @@ cache_dict_t *dict_new() {
     return dict;
 }
 
+cache_queue_t *queue_new() {
+  cache_queue_t *q = malloc(sizeof(cache_queue_t));
+  assert(q != NULL);
+
+  // insert a dummy head node.
+  cache_node_t *tmp = malloc(sizeof(cache_queue_t));
+  assert(tmp != NULL);
+  tmp->next = NULL;
+
+  q->head = q->tail = tmp;
+
+  return q;
+}
+
 void remove_from_dict(cache_dict_node_t *node) {
     assert(cache_dict != NULL);
     assert(node != NULL);
@@ -82,20 +96,6 @@ void remove_from_dict(cache_dict_node_t *node) {
     }
 }
 
-cache_queue_t *queue_new() {
-  cache_queue_t *q = malloc(sizeof(cache_queue_t));
-  assert(q != NULL);
-
-  // insert a dummy head node.
-  cache_node_t *tmp = malloc(sizeof(cache_queue_t));
-  assert(tmp != NULL);
-  tmp->next = NULL;
-
-  q->head = q->tail = tmp;
-
-  return q;
-}
-
 void dequeue_cache() {
     if (cache_queue->tail == cache_queue->head) {
         // No elements to dequeue, queue is just the sentinel.
@@ -104,7 +104,7 @@ void dequeue_cache() {
 
     // Remove the least-recently-used file from the end.
     cache_node_t tail = *cache_queue->tail;
-   
+    free(cache_queue->tail);
     cache_node_t prev = *tail.prev;
     // Point the tail of the cache queue to the second to last element.
     cache_queue->tail = &prev; 
@@ -113,17 +113,15 @@ void dequeue_cache() {
     cache_dict_node_t *current = cache_dict->head;
     while (current != NULL) {
         if (strcmp(cache_dict->head->key_filepath, tail.filepath) == 0) {
-            free(&tail);
+
             remove_from_dict(cache_dict->head);
             return;
         }
         current = current->next;
     }
-
-    free(&tail);
 }
 
-void enqueue_cache(const char *filepath, const char *data, int size) {
+void enqueue_cache(char *filepath, char *data, int size) {
     // Make space if not available.
     if (cache_dict->count >= MAX_CACHE_QUEUE) {
         dequeue_cache();
@@ -133,13 +131,29 @@ void enqueue_cache(const char *filepath, const char *data, int size) {
     cache_node_t *new_node = (cache_node_t *) malloc(sizeof(cache_node_t));
     // POTENTIAL VULNERABILITY TO BUFFER OVERFLOW, FIX.
     strcpy(new_node->bytes, data);
-    // TODO: ENQUEUE a new node by assigning prev to sentinel, next to list.
+
+    // D->N1->N2-/>
+    // N3->N1->N2-/>
+    new_node->next = cache_queue->head->next;
+    // D->N3->N1->N2-/>
+    cache_queue->head->next = new_node;
     
+    new_node->prev = cache_queue->head;
 
     // Add pair to dictionary.
     cache_dict_node_t *new_dict_node = (cache_dict_node_t *) malloc(sizeof(cache_dict_node_t));
+    // Initialize values in new node.
     new_dict_node->key_filepath = filepath;
-    new_dict_node->value_node
+    new_dict_node->value_node = new_node; 
+    new_dict_node->filesize = size;
+    
+    // Prepend the new node to the head of the dict.
+    new_dict_node->next = cache_dict->head;
+
+    // Assign the head to the new node.
+    cache_dict->head = new_dict_node;
+    // Increment the size of the dict.
+    cache_dict->count = cache_dict->count + 1;
 }
 
 void requeue_cache(const char *filepath, const char *data) {
