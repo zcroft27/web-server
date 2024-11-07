@@ -4,24 +4,127 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include <assert.h>
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
 #define MAX_THREADS 3
 #define MAX_QUEUE 10
+#define MAX_CACHE_SIZE 65536 // 2^16, 2 bytes
+#define MAX_CACHE_QUEUE 10
 
 pthread_mutex_t thread_count_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t thread_available_cond = PTHREAD_COND_INITIALIZER;
+
+typedef struct cache_node {
+    struct cache_node *next;
+    struct cache_node *prev;
+    char filepath[256];
+    char bytes[MAX_CACHE_SIZE];
+} cache_node_t;
+
+typedef struct cache_dict_node {
+    struct cache_dict_node *next;
+    char key_filepath[256];
+    cache_node_t *value_node;
+} cache_dict_node_t;
+
+typedef struct cache_dict {
+    cache_dict_node_t *head;
+} cache_dict_t;
+
+typedef struct cache_queue {
+    cache_node_t *head;
+    cache_node_t *tail;
+} cache_queue_t;
 
 typedef struct {
     int clientfd;
     char filepath[256];
 } serve_file_args_t;
 
+cache_queue_t *cache_queue;
+cache_dict_t *cache_dict;
+
 serve_file_args_t request_queue[MAX_QUEUE];
 int queue_start = 0;
 int queue_end = 0;
 int queue_size = 0;
+
+cache_dict_t *dict_new() {
+    cache_dict_t *dict = malloc(sizeof(cache_dict_t));
+    assert(dict != NULL);
+
+    // Allocate a sentinel node.
+    cache_dict_node_t *sentinel = malloc(sizeof(cache_dict_node_t));
+    assert(sentinel != NULL);
+    sentinel->next = NULL;
+
+    dict->head = sentinel;
+    
+    return dict;
+}
+
+void remove_from_dict(cache_dict_node_t *node) {
+    assert(cache_dict != NULL);
+    assert(node != NULL);
+
+    while (cache_dict->head != NULL) {
+        cache_dict_node_t *current = cache_dict->head;
+        if (current == node) {
+            current = node->next;
+            free(node);
+            return;
+        }
+        current = current->next;
+    }
+}
+
+cache_queue_t *queue_new() {
+  cache_queue_t *q = malloc(sizeof(cache_queue_t));
+  assert(q != NULL);
+
+  // insert a dummy head node.
+  cache_node_t *tmp = malloc(sizeof(cache_queue_t));
+  assert(tmp != NULL);
+  tmp->next = NULL;
+
+  q->head = q->tail = tmp;
+
+  return q;
+}
+
+void dequeue_cache() {
+    if (cache_queue->tail == cache_queue->head) {
+        // No elements to dequeue, queue is just the sentinel.
+        return;
+    }
+
+    // Remove the least-recently-used file from the end.
+    cache_node_t tail = *cache_queue->tail;
+   
+    cache_node_t prev = *tail.prev;
+    // Point the tail of the cache queue to the second to last element.
+    cache_queue->tail = &prev; 
+
+    // Remove this pair from the cache dictionary.
+    cache_dict_node_t *current = cache_dict->head;
+    while (current != NULL) {
+        if (strcmp(cache_dict->head->key_filepath, tail.filepath) == 0) {
+            remove_from_dict(cache_dict->head);
+            return;
+        }
+        current = current->next;
+    }
+}
+
+void enqueue_cache(const char *filepath, const char *data) {
+    
+}
+
+void requeue_cache(const char *filepath, const char *data) {
+
+}
 
 void enqueue_request(int clientfd, const char *filepath) {
     pthread_mutex_lock(&thread_count_mutex);
