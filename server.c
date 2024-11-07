@@ -125,7 +125,7 @@ void dequeue_cache() {
 
 void enqueue_cache(char *filepath, char *data, int size) {
     printf("in enqueue duh\n");
-    printf("also enqueue");
+    printf("also enqueue\n");
     // Make space if not available.
 //    if (cache_dict->count >= MAX_CACHE_QUEUE) {
   //      printf("after dereference count\n");
@@ -133,13 +133,13 @@ void enqueue_cache(char *filepath, char *data, int size) {
       //  dequeue_cache();
    // }
 
-    printf("before malloc new node in enqueue");
+    printf("before malloc new node in enqueue\n");
     // Prepend a new node to the LRU cache, marking this as the most-recently served file.
     cache_node_t *new_node = (cache_node_t *) malloc(sizeof(cache_node_t));
-    printf("before strcpy enqueue");
+    printf("before strcpy enqueue\n");
     // POTENTIAL VULNERABILITY TO BUFFER OVERFLOW, FIX.
     strcpy(new_node->bytes, data);
-    printf("after strcpy enqueue");
+    printf("after strcpy enqueue\n");
 
     // D->N1->N2-/>
     // N3->N1->N2-/>
@@ -163,7 +163,7 @@ void enqueue_cache(char *filepath, char *data, int size) {
     cache_dict->head = new_dict_node;
     // Increment the size of the dict.
     cache_dict->count = cache_dict->count + 1;
-    printf("done enqueueing");
+    printf("done enqueueing\n");
 }
 
 void requeue_cache(cache_dict_node_t *node_to_requeue, cache_dict_node_t *prev) {
@@ -190,7 +190,7 @@ int retrieve_data(const char *filepath, char *write_data_here) {
         printf("before strcmp in retrieve_data\n");
         if (iterator->key_filepath == NULL) {
  	    iterator  = iterator->next;
-	    printf("continuing");
+	    printf("continuing\n");
             continue;
 	}
 	printf("retrieve path: %s\n", iterator->key_filepath);
@@ -270,7 +270,7 @@ void serve_file(int clientfd, char *filepath) {
     printf("before retrieving data\n");
     char *data = (char *) malloc(MAX_CACHE_SIZE);
     if (retrieve_data(filepath, data) == 0) {
-        printf("cached!");
+        printf("cached!\n");
         return;
     }
     printf("after retrieving data\n");
