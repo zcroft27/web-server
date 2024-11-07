@@ -53,7 +53,7 @@ int queue_start = 0;
 int queue_end = 0;
 int queue_size = 0;
 
-cache_dict_t *dict_new() {
+void dict_new() {
     cache_dict_t *dict = malloc(sizeof(cache_dict_t));
     assert(dict != NULL);
 
@@ -61,13 +61,13 @@ cache_dict_t *dict_new() {
     cache_dict_node_t *sentinel = malloc(sizeof(cache_dict_node_t));
     assert(sentinel != NULL);
     sentinel->next = NULL;
-
+    dict->count = 0;
     dict->head = sentinel;
     
-    return dict;
+    cache_dict = dict;
 }
 
-cache_queue_t *queue_new() {
+void queue_new() {
   cache_queue_t *q = malloc(sizeof(cache_queue_t));
   assert(q != NULL);
 
@@ -78,7 +78,7 @@ cache_queue_t *queue_new() {
 
   q->head = q->tail = tmp;
 
-  return q;
+  cache_queue = q;
 }
 
 void remove_from_dict(cache_dict_node_t *node) {
