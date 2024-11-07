@@ -203,7 +203,7 @@ void enqueue_request(int clientfd, const char *filepath) {
         request_queue[queue_end].clientfd = clientfd; 
         // Remove the leading / from the path.
         snprintf(request_queue[queue_end].filepath, sizeof(request_queue[queue_end].filepath), ".%s", filepath);
-        // 
+        
         queue_end = (queue_end + 1) % MAX_QUEUE;
         queue_size++;
         
@@ -245,6 +245,12 @@ void serve_file(int clientfd, char *filepath) {
         return;
     }
     
+    char *data = (char *) malloc(MAX_CACHE_SIZE);
+    if (retrieve_data(filepath, data) == 0) {
+        printf("cached!");
+        return;
+    }
+
     // Determine file size.
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
@@ -267,10 +273,14 @@ void serve_file(int clientfd, char *filepath) {
         return;
     }
 
+    char *accumulated_data = (char *) malloc(MAX_CACHE_SIZE);
+
     // Send file in BUFFER_SIZE sized chunks.
     char file_buffer[BUFFER_SIZE];
     size_t bytes_read;
     while ((bytes_read = fread(file_buffer, 1, BUFFER_SIZE, file)) > 0) {
+        // Add data to accumulator for caching.
+        strcat(accumulated_data, file_buffer);
         ssize_t bytes_written = write(clientfd, file_buffer, bytes_read);
         if (bytes_written < 0) { 
             // Error writing to client.
@@ -281,6 +291,9 @@ void serve_file(int clientfd, char *filepath) {
             printf("Client closed the connection.\n");
             break;
         }
+
+        // Since this file was not read from cache, enqueue its data into cache.
+        enqueue_cache(filepath, accumulated_data, file_size);
     }
 
     fclose(file);
@@ -321,6 +334,9 @@ int main() {
     address.sin_port = htons(PORT);
     bind(server_fd, (struct sockaddr *)&address, sizeof(address));
     //===Boilerplate code end===
+
+    queue_new();
+    dict_new();
 
     // Listen for connections.
     listen(server_fd, 10);
