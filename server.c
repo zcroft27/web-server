@@ -126,12 +126,12 @@ void dequeue_cache() {
 void enqueue_cache(char *filepath, char *data, int size) {
     printf("in enqueue duh\n");
     printf("also enqueue\n");
-    // Make space if not available.
-//    if (cache_dict->count >= MAX_CACHE_QUEUE) {
-  //      printf("after dereference count\n");
-    //    fflush(stdout);
-      //  dequeue_cache();
-   // }
+    //Make space if not available.
+    if (cache_dict->count >= MAX_CACHE_QUEUE) {
+        printf("after dereference count\n");
+        fflush(stdout);
+        dequeue_cache();
+    }
 
     printf("before malloc new node in enqueue\n");
     // Prepend a new node to the LRU cache, marking this as the most-recently served file.
@@ -183,7 +183,7 @@ void requeue_cache(cache_dict_node_t *node_to_requeue, cache_dict_node_t *prev) 
 
   Returns 0 if success, -1 if cache miss.  
 */
-int retrieve_data(const char *filepath, char *write_data_here) {
+int retrieve_data(const char *filepath, char *write_data_here, long *filesize) {
     cache_dict_node_t *prev;
     cache_dict_node_t *iterator = cache_dict->head;
     while (cache_dict != NULL && iterator  != NULL) {
@@ -199,6 +199,7 @@ int retrieve_data(const char *filepath, char *write_data_here) {
             // Write the data.
             printf("before write in retrieve_data\n");
             strcpy(write_data_here, cache_dict->head->value_node->bytes);
+            *filesize = cache_dict->head->filesize;
             requeue_cache(cache_dict->head, prev);
             return 0;
         }
@@ -269,9 +270,26 @@ void serve_file(int clientfd, char *filepath) {
 
     printf("before retrieving data\n");
     char *data = (char *) malloc(MAX_CACHE_SIZE);
-    if (retrieve_data(filepath, data) == 0) {
+    char headers[BUFFER_SIZE];
+    long fsize;
+    if (retrieve_data(filepath, data, &fsize) == 0) {
         printf("cached!\n");
-        return;
+            // Prepare HTTP response headers.
+        snprintf(headers, sizeof(headers),
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/html\r\n"
+                "Content-Length: %ld\r\n"
+                "\r\n", fsize);
+
+        // Write headers to client.         
+        if (write(clientfd, headers, strlen(headers)) < 0) {
+            perror("Error writing headers");
+            fclose(file);
+            free(filepath);
+            close(clientfd);
+            return;
+        }
+            return;
     }
     printf("after retrieving data\n");
 
@@ -281,7 +299,6 @@ void serve_file(int clientfd, char *filepath) {
     rewind(file);
 
     // Prepare HTTP response headers.
-    char headers[BUFFER_SIZE];
     snprintf(headers, sizeof(headers),
              "HTTP/1.1 200 OK\r\n"
              "Content-Type: text/html\r\n"
