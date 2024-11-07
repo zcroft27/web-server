@@ -158,8 +158,28 @@ void enqueue_cache(char *filepath, char *data, int size) {
     cache_dict->count = cache_dict->count + 1;
 }
 
-void requeue_cache(const char *filepath, const char *data) {
+void requeue_cache(cache_dict_node_t *node_to_requeue) {
+    
+}
 
+/*
+  If the filepath is stored in the cache, it writes the data to
+  write_data_here and requeues the associated cache_node to most-recent.
+
+  Returns 0 if success, -1 if cache miss.  
+*/
+int retrieve_data(const char *filepath, char *write_data_here) {
+    while (cache_dict != NULL && cache_dict->head != NULL) {
+        if (strcmp(filepath, cache_dict->head->key_filepath) == 0) {
+            // Write the data.
+            strcpy(write_data_here, cache_dict->head->value_node->bytes);
+            requeue_cache(cache_dict->head);
+            return 0;
+        }
+    }
+
+    // Failure, return -1.
+    return -1;
 }
 
 void enqueue_request(int clientfd, const char *filepath) {
