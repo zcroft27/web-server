@@ -158,8 +158,15 @@ void enqueue_cache(char *filepath, char *data, int size) {
     cache_dict->count = cache_dict->count + 1;
 }
 
-void requeue_cache(cache_dict_node_t *node_to_requeue) {
-    
+void requeue_cache(cache_dict_node_t *node_to_requeue, cache_dict_node_t *prev) {
+    // Remove the node.
+    cache_dict_node_t *tmp = node_to_requeue->next;
+    prev->next = tmp; 
+
+    // Prepend it (after the sentinel).
+    node_to_requeue->next = cache_dict->head->next;
+    // Prepend the sentinel.
+    cache_dict->head = node_to_requeue;
 }
 
 /*
@@ -169,13 +176,15 @@ void requeue_cache(cache_dict_node_t *node_to_requeue) {
   Returns 0 if success, -1 if cache miss.  
 */
 int retrieve_data(const char *filepath, char *write_data_here) {
+    cache_dict_node_t *prev;
     while (cache_dict != NULL && cache_dict->head != NULL) {
         if (strcmp(filepath, cache_dict->head->key_filepath) == 0) {
             // Write the data.
             strcpy(write_data_here, cache_dict->head->value_node->bytes);
-            requeue_cache(cache_dict->head);
+            requeue_cache(cache_dict->head, prev);
             return 0;
         }
+        prev = cache_dict->head;
     }
 
     // Failure, return -1.
