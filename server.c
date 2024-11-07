@@ -133,7 +133,9 @@ void enqueue_cache(const char *filepath, const char *data, int size) {
     cache_node_t *new_node = (cache_node_t *) malloc(sizeof(cache_node_t));
     // POTENTIAL VULNERABILITY TO BUFFER OVERFLOW, FIX.
     strcpy(new_node->bytes, data);
+    // TODO: ENQUEUE a new node by assigning prev to sentinel, next to list.
     
+
     // Add pair to dictionary.
     cache_dict_node_t *new_dict_node = (cache_dict_node_t *) malloc(sizeof(cache_dict_node_t));
     new_dict_node->key_filepath = filepath;
