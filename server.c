@@ -19,18 +19,20 @@ pthread_cond_t thread_available_cond = PTHREAD_COND_INITIALIZER;
 typedef struct cache_node {
     struct cache_node *next;
     struct cache_node *prev;
-    char filepath[256];
+    char *filepath;
     char bytes[MAX_CACHE_SIZE];
 } cache_node_t;
 
 typedef struct cache_dict_node {
     struct cache_dict_node *next;
-    char key_filepath[256];
+    char *key_filepath;
     cache_node_t *value_node;
+    int filesize;
 } cache_dict_node_t;
 
 typedef struct cache_dict {
     cache_dict_node_t *head;
+    int count;
 } cache_dict_t;
 
 typedef struct cache_queue {
@@ -111,15 +113,31 @@ void dequeue_cache() {
     cache_dict_node_t *current = cache_dict->head;
     while (current != NULL) {
         if (strcmp(cache_dict->head->key_filepath, tail.filepath) == 0) {
+            free(&tail);
             remove_from_dict(cache_dict->head);
             return;
         }
         current = current->next;
     }
+
+    free(&tail);
 }
 
-void enqueue_cache(const char *filepath, const char *data) {
+void enqueue_cache(const char *filepath, const char *data, int size) {
+    // Make space if not available.
+    if (cache_dict->count >= MAX_CACHE_QUEUE) {
+        dequeue_cache();
+    }
+
+    // Prepend a new node to the LRU cache, marking this as the most-recently served file.
+    cache_node_t *new_node = (cache_node_t *) malloc(sizeof(cache_node_t));
+    // POTENTIAL VULNERABILITY TO BUFFER OVERFLOW, FIX.
+    strcpy(new_node->bytes, data);
     
+    // Add pair to dictionary.
+    cache_dict_node_t *new_dict_node = (cache_dict_node_t *) malloc(sizeof(cache_dict_node_t));
+    new_dict_node->key_filepath = filepath;
+    new_dict_node->value_node
 }
 
 void requeue_cache(const char *filepath, const char *data) {
