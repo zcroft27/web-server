@@ -159,7 +159,6 @@ void enqueue_cache(char *filepath, char *data, int size) {
     cache_dict->head = new_dict_node;
     // Increment the size of the dict.
     cache_dict->count = cache_dict->count + 1;
-    printf("done enqueueing\n");
 }
 
 void requeue_cache(cache_dict_node_t *node_to_requeue, cache_dict_node_t *prev) {
@@ -183,10 +182,8 @@ int retrieve_data(const char *filepath, char *write_data_here, long *filesize) {
     cache_dict_node_t *prev;
     cache_dict_node_t *iterator = cache_dict->head;
     while (cache_dict != NULL && iterator  != NULL) {
-        printf("before strcmp in retrieve_data\n");
         if (iterator->key_filepath == NULL) {
  	    iterator  = iterator->next;
-	    printf("continuing\n");
             continue;
 	}
 	printf("retrieve path: %s\n", iterator->key_filepath);
@@ -199,7 +196,6 @@ int retrieve_data(const char *filepath, char *write_data_here, long *filesize) {
             requeue_cache(cache_dict->head, prev);
             return 0;
         }
-        printf("before inc prev in retrieve data\n");
         prev = iterator;
         iterator = iterator->next;
     }
@@ -224,7 +220,6 @@ void enqueue_request(int clientfd, const char *filepath) {
         queue_end = (queue_end + 1) % MAX_QUEUE;
         queue_size++;
         
-        printf("about to signal\n");
         // Signal that there is work to do to one waiting thread (chosen by the scheduler).
         pthread_cond_signal(&thread_available_cond);
     }
@@ -246,7 +241,6 @@ serve_file_args_t dequeue_request() {
     queue_size--;
     
     pthread_mutex_unlock(&thread_count_mutex);
-    printf("done dequeueing request\n");
     return request;
 }
 
@@ -277,15 +271,11 @@ void serve_file(int clientfd, char *filepath) {
                 "Content-Type: text/html\r\n"
                 "Content-Length: %ld\r\n"
                 "\r\n", fsize);
-        printf("about to write to client: %s\n", headers);
 	write(clientfd, headers, strlen(headers));
-	printf("post writing\n");
         // Write headers to client
         write(clientfd, data, fsize);
-	printf("post writing data\n");
         return;
     }
-    printf("after retrieving data\n");
 
     // Determine file size.
     fseek(file, 0, SEEK_END);
