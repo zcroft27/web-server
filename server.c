@@ -99,6 +99,7 @@ void remove_from_dict(cache_dict_node_t *node) {
 }
 
 void dequeue_cache() {
+    printf("dequeueing!\n");
     if (cache_queue->tail == cache_queue->head) {
         // No elements to dequeue, queue is just the sentinel.
         return;
@@ -126,14 +127,12 @@ void dequeue_cache() {
 void enqueue_cache(char *filepath, char *data, int size) {
     //Make space if not available.
     if (cache_dict->count >= MAX_CACHE_QUEUE) {
-        printf("after dereference count\n");
         fflush(stdout);
         dequeue_cache();
     }
 
     // Prepend a new node to the LRU cache, marking this as the most-recently served file.
     cache_node_t *new_node = (cache_node_t *) malloc(sizeof(cache_node_t));
-    printf("before strcpy enqueue: %s %s\n", data, filepath);
     // POTENTIAL VULNERABILITY TO BUFFER OVERFLOW, FIX.
     strcpy(new_node->bytes, data);
 
@@ -159,6 +158,7 @@ void enqueue_cache(char *filepath, char *data, int size) {
     cache_dict->head = new_dict_node;
     // Increment the size of the dict.
     cache_dict->count = cache_dict->count + 1;
+    printf("enqueued! %s\n", filepath);
 }
 
 void requeue_cache(cache_dict_node_t *node_to_requeue, cache_dict_node_t *prev) {
