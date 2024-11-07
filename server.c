@@ -124,8 +124,12 @@ void dequeue_cache() {
 }
 
 void enqueue_cache(char *filepath, char *data, int size) {
+    printf("in enqueue\n");
+    fflush(stdout);
     // Make space if not available.
     if (cache_dict->count >= MAX_CACHE_QUEUE) {
+        printf("after dereference count\n");
+        fflush(stdout);
         dequeue_cache();
     }
 
@@ -177,14 +181,25 @@ void requeue_cache(cache_dict_node_t *node_to_requeue, cache_dict_node_t *prev) 
 */
 int retrieve_data(const char *filepath, char *write_data_here) {
     cache_dict_node_t *prev;
-    while (cache_dict != NULL && cache_dict->head != NULL) {
-        if (strcmp(filepath, cache_dict->head->key_filepath) == 0) {
+    cache_dict_node_t *iterator = cache_dict->head;
+    while (cache_dict != NULL && iterator  != NULL) {
+        printf("before strcmp in retrieve_data\n");
+        if (iterator->key_filepath == NULL) {
+ 	    iterator  = iterator->next;
+            continue;
+	}
+	printf("retrieve path: %s\n", iterator->key_filepath);
+	fflush(stdout);
+        if (strcmp(filepath, iterator->key_filepath) == 0) {
             // Write the data.
+            printf("before write in retrieve_data\n");
             strcpy(write_data_here, cache_dict->head->value_node->bytes);
             requeue_cache(cache_dict->head, prev);
             return 0;
         }
-        prev = cache_dict->head;
+        printf("before inc prev in retrieve data\n");
+        prev = iterator;
+        iterator = iterator->next;
     }
 
     // Failure, return -1.
@@ -207,6 +222,7 @@ void enqueue_request(int clientfd, const char *filepath) {
         queue_end = (queue_end + 1) % MAX_QUEUE;
         queue_size++;
         
+        printf("about to signal\n");
         // Signal that there is work to do to one waiting thread (chosen by the scheduler).
         pthread_cond_signal(&thread_available_cond);
     }
@@ -228,6 +244,7 @@ serve_file_args_t dequeue_request() {
     queue_size--;
     
     pthread_mutex_unlock(&thread_count_mutex);
+    printf("done dequeueing request\n");
     return request;
 }
 
@@ -244,12 +261,14 @@ void serve_file(int clientfd, char *filepath) {
         close(clientfd);
         return;
     }
-    
+
+    printf("before retrieving data\n");
     char *data = (char *) malloc(MAX_CACHE_SIZE);
     if (retrieve_data(filepath, data) == 0) {
         printf("cached!");
         return;
     }
+    printf("after retrieving data\n");
 
     // Determine file size.
     fseek(file, 0, SEEK_END);
@@ -274,13 +293,21 @@ void serve_file(int clientfd, char *filepath) {
     }
 
     char *accumulated_data = (char *) malloc(MAX_CACHE_SIZE);
+   size_t accumulated_size = 0;
 
     // Send file in BUFFER_SIZE sized chunks.
     char file_buffer[BUFFER_SIZE];
     size_t bytes_read;
     while ((bytes_read = fread(file_buffer, 1, BUFFER_SIZE, file)) > 0) {
         // Add data to accumulator for caching.
-        strcat(accumulated_data, file_buffer);
+	if (accumulated_size + bytes_read < MAX_CACHE_SIZE) {
+           memcpy(accumulated_data + accumulated_size, file_buffer, bytes_read);
+           accumulated_size += bytes_read;
+        } else {
+           // Handle overflow, either by truncating or reallocating.
+       	   break;
+        }
+
         ssize_t bytes_written = write(clientfd, file_buffer, bytes_read);
         if (bytes_written < 0) { 
             // Error writing to client.
@@ -367,6 +394,7 @@ int main() {
             strcpy(path, "/index.html");
         }
 
+	printf("about to enqueue request\n");
         // Enqueue the request.
         enqueue_request(client_fd, path);
     }
