@@ -190,8 +190,8 @@ int retrieve_data(const char *filepath, char *write_data_here, long *filesize) {
 	fflush(stdout);
         if (strcmp(filepath, iterator->key_filepath) == 0) {
             // Write the data.
-            printf("before write in retrieve_data%s %s\n", iterator->key_filepath, cache_dict->head->value_node->bytes);
-            strcpy(write_data_here, cache_dict->head->value_node->bytes);
+            printf("before write in retrieve_data%s %s\n", iterator->key_filepath, iterator->value_node->bytes);
+            strcpy(write_data_here, iterator->value_node->bytes);
             *filesize = cache_dict->head->filesize;
             requeue_cache(cache_dict->head, prev);
             return 0;
