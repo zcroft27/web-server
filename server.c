@@ -289,6 +289,8 @@ void serve_file(int clientfd, char *filepath) {
             close(clientfd);
             return;
         }
+
+        write(clientfd, data, fsize);
             return;
     }
     printf("after retrieving data\n");
