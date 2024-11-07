@@ -1,16 +1,17 @@
 # Building an HTTP Server in C
 
 ## Overview
-I am beginning a personal project to create a web server in C. 
+A small web server in C to learn about multithreading, caching, thread-safe programming, etc.
+https://github.com/zcroft27/web-server 
 
 **server.c Flow So Far**: 
 - Creates a new socket, binds it using the IPv4 option, and listens using the file descriptor for the new socket.   
 - Enters infinite while loop for accepting connections.
+- Creates a pool of 10 worker POSIX threads, blocked by pthread_cond_signal, waiting to read requests.  
 - Accepts a connection and assigns a file descriptor for the new client.
-- Reads from the file descriptor into a buffer.
+- Enqueues a request and signals a thread to read the request from the client file descriptor into a buffer.
 - Parses the buffer to extract the method (GET, POST, PUT, etc.) and the path/route.
 - If the file is cached, serve from memory instead of reading using a system call.
-- Creates new POSIX thread (if space allows, otherwise rejects) and invokes a 'start routine' serve_file_aux() to attempt to serve the requested file to the client, passing the client file descriptor and filepath.
 - If read with a system call, cache current file data and metadata in least-recently-used (LRU) cache. 
 - Continue in loop, accepting up to 10 (arbitrary) connections concurrently.
 
@@ -24,22 +25,22 @@ a new thread after accepting a connection.
 to speed up serving files.
 - Utilizes a dictionary alongside the LRU cache as a lookup table for cached nodes
 for quicker access (I don't think I actually implemented the dictionary with O(1) access... TODO).
-- Enqueues requests from clients using a cute circular buffer I found that really confused me at first:
-serve_file_args_t request_queue[MAX_QUEUE];
-int queue_start = 0;
-int queue_end = 0;
-int queue_size = 0;
-**On enqueue:**
+- Enqueues requests from clients using a cute circular buffer I found that really confused me at first:  
+serve_file_args_t request_queue[MAX_QUEUE];  
+int queue_start = 0;  
+int queue_end = 0;  
+int queue_size = 0;    
+**On enqueue:**  
 
-request_queue[queue_end].clientfd = clientfd;
-snprintf(request_queue[queue_end].filepath, sizeof(request_queue[queue_end].filepath), ".%s", filepath);
-queue_end = (queue_end + 1) % MAX_QUEUE;
-queue_size++;
+request_queue[queue_end].clientfd = clientfd;  
+snprintf(request_queue[queue_end].filepath, sizeof(request_queue[queue_end].filepath), ".%s", filepath);  
+queue_end = (queue_end + 1) % MAX_QUEUE;  
+queue_size++;  
 
-**On dequeue:**
-serve_file_args_t request = request_queue[queue_start];
-queue_start = (queue_start + 1) % MAX_QUEUE;
-queue_size--;
+**On dequeue:**  
+serve_file_args_t request = request_queue[queue_start];  
+queue_start = (queue_start + 1) % MAX_QUEUE;  
+queue_size--;  
 
 It just rotates the start and end pointers around... cool.
 
@@ -62,8 +63,8 @@ although I am not sure if it would be better to use fork() to better isolate req
 A simple way to test if your multithreading is working is to create a huge file, request it, and then
 make another request concurrently.
 
-I created long.txt: 
-shuf -i1-100000000 > long.txt
+I created long.txt:   
+shuf -i1-100000000 > long.txt  
 And requesting this file in ~10 tabs rapidly used 16gb of RAM before I killed the server.
 
 
