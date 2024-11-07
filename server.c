@@ -275,23 +275,19 @@ void serve_file(int clientfd, char *filepath) {
     if (retrieve_data(filepath, data, &fsize) == 0) {
         printf("cached!\n");
             // Prepare HTTP response headers.
+	printf("fsz: %ld\n", fsize);
         snprintf(headers, sizeof(headers),
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: text/html\r\n"
                 "Content-Length: %ld\r\n"
                 "\r\n", fsize);
-
-        // Write headers to client.         
-        if (write(clientfd, headers, strlen(headers)) < 0) {
-            perror("Error writing headers");
-            fclose(file);
-            free(filepath);
-            close(clientfd);
-            return;
-        }
-
+        printf("about to write to client: %s\n", headers);
+	write(clientfd, headers, strlen(headers));
+	printf("post writing\n");
+        // Write headers to client
         write(clientfd, data, fsize);
-            return;
+	printf("post writing data\n");
+        return;
     }
     printf("after retrieving data\n");
 
