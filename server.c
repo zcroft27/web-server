@@ -11,7 +11,7 @@
 #define MAX_THREADS 3
 #define MAX_QUEUE 10
 #define MAX_CACHE_SIZE 65536 // 2^16, 2 bytes
-#define MAX_CACHE_QUEUE 10
+#define MAX_CACHE_QUEUE 2
 
 pthread_mutex_t thread_count_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t thread_available_cond = PTHREAD_COND_INITIALIZER;
@@ -270,6 +270,9 @@ void serve_file(int clientfd, char *filepath) {
 	write(clientfd, headers, strlen(headers));
         // Write headers to client
         write(clientfd, data, fsize);
+	printf("wrote from cache: %s %s\n", data, filepath);
+	fclose(file);
+	close(clientfd);
         return;
     }
 
