@@ -186,11 +186,9 @@ int retrieve_data(const char *filepath, char *write_data_here, long *filesize) {
  	    iterator  = iterator->next;
             continue;
 	}
-	printf("retrieve path: %s\n", iterator->key_filepath);
 	fflush(stdout);
         if (strcmp(filepath, iterator->key_filepath) == 0) {
             // Write the data.
-            printf("before write in retrieve_data%s %s\n", iterator->key_filepath, iterator->value_node->bytes);
             strcpy(write_data_here, iterator->value_node->bytes);
             *filesize = cache_dict->head->filesize;
             requeue_cache(cache_dict->head, prev);
@@ -258,14 +256,12 @@ void serve_file(int clientfd, char *filepath) {
         return;
     }
 
-    printf("before retrieving data\n");
     char *data = (char *) malloc(MAX_CACHE_SIZE);
     char headers[BUFFER_SIZE];
     long fsize;
     if (retrieve_data(filepath, data, &fsize) == 0) {
-        printf("cached!\n");
-            // Prepare HTTP response headers.
-	printf("fsz: %ld\n", fsize);
+        // Prepare HTTP response headers.
+
         snprintf(headers, sizeof(headers),
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: text/html\r\n"
@@ -400,7 +396,6 @@ int main() {
             strcpy(path, "/index.html");
         }
 
-	printf("about to enqueue request\n");
         // Enqueue the request.
         enqueue_request(client_fd, path);
     }
