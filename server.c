@@ -124,8 +124,6 @@ void dequeue_cache() {
 }
 
 void enqueue_cache(char *filepath, char *data, int size) {
-    printf("in enqueue duh\n");
-    printf("also enqueue\n");
     //Make space if not available.
     if (cache_dict->count >= MAX_CACHE_QUEUE) {
         printf("after dereference count\n");
@@ -133,13 +131,11 @@ void enqueue_cache(char *filepath, char *data, int size) {
         dequeue_cache();
     }
 
-    printf("before malloc new node in enqueue\n");
     // Prepend a new node to the LRU cache, marking this as the most-recently served file.
     cache_node_t *new_node = (cache_node_t *) malloc(sizeof(cache_node_t));
-    printf("before strcpy enqueue\n");
+    printf("before strcpy enqueue: %s %s\n", data, filepath);
     // POTENTIAL VULNERABILITY TO BUFFER OVERFLOW, FIX.
     strcpy(new_node->bytes, data);
-    printf("after strcpy enqueue\n");
 
     // D->N1->N2-/>
     // N3->N1->N2-/>
@@ -197,7 +193,7 @@ int retrieve_data(const char *filepath, char *write_data_here, long *filesize) {
 	fflush(stdout);
         if (strcmp(filepath, iterator->key_filepath) == 0) {
             // Write the data.
-            printf("before write in retrieve_data\n");
+            printf("before write in retrieve_data%s %s\n", iterator->key_filepath, cache_dict->head->value_node->bytes);
             strcpy(write_data_here, cache_dict->head->value_node->bytes);
             *filesize = cache_dict->head->filesize;
             requeue_cache(cache_dict->head, prev);
