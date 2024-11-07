@@ -94,6 +94,8 @@ void remove_from_dict(cache_dict_node_t *node) {
         }
         current = current->next;
     }
+
+    cache_dict->count = cache_dict->count - 1;
 }
 
 void dequeue_cache() {
