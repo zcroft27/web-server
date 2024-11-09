@@ -268,13 +268,21 @@ void serve_file(int clientfd, char *filepath) {
                 "Content-Type: text/html\r\n"
                 "Content-Length: %ld\r\n"
                 "\r\n", fsize);
-	write(clientfd, headers, strlen(headers));
         // Write headers to client
-        write(clientfd, data, fsize);
-	printf("wrote from cache: %s %s\n", data, filepath);
-	fclose(file);
-	close(clientfd);
-        return;
+        write(clientfd, headers, strlen(headers));
+        
+        // Write data to client, ensuring complete write.
+        ssize_t bytes_written = 0;
+        while (bytes_written < fsize) {
+            ssize_t n = write(clientfd, data + bytes_written, fsize - bytes_written);
+            if (n < 0) break; // Error writing to client.
+            bytes_written += n;
+        }
+
+        printf("wrote from cache: %s %s\n", data, filepath);
+        fclose(file);
+        close(clientfd);
+            return;
     }
 
     // Determine file size.
