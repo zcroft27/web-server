@@ -186,6 +186,7 @@ int retrieve_data(const char *filepath, char *write_data_here, long *filesize) {
  	    iterator  = iterator->next;
             continue;
 	}
+    printf("key: %s value %s\n", iterator->key_filepath, iterator->value_node->bytes);
 	fflush(stdout);
         if (strcmp(filepath, iterator->key_filepath) == 0) {
             // Write the data.
