@@ -147,7 +147,7 @@ void enqueue_cache(char *filepath, char *data, int size) {
     // Add pair to dictionary.
     cache_dict_node_t *new_dict_node = (cache_dict_node_t *) malloc(sizeof(cache_dict_node_t));
     // Initialize values in new node.
-    new_dict_node->key_filepath = filepath;
+    new_dict_node->key_filepath = strdup(filepath);
     new_dict_node->value_node = new_node; 
     new_dict_node->filesize = size;
     
