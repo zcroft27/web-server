@@ -88,7 +88,7 @@ void remove_from_dict(cache_dict_node_t *node) {
     while (cache_dict->head != NULL) {
         cache_dict_node_t *current = cache_dict->head;
         if (current == node) {
-            current = node->next;
+            cache_dict->head = node->next;
             free(node);
             return;
         }
