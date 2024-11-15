@@ -1,8 +1,7 @@
 # Building an HTTP Server in C
 
 ## Overview
-A small web server in C to learn about multithreading, caching, thread-safe programming, etc.
-https://github.com/zcroft27/web-server 
+A small web server in C to learn about multithreading, caching, thread-safe programming, etc. 
 
 **server.c Flow So Far**: 
 - Creates a new socket, binds it using the IPv4 option, and listens using the file descriptor for the new socket.   
@@ -29,7 +28,8 @@ for quicker access (I don't think I actually implemented the dictionary with O(1
 serve_file_args_t request_queue[MAX_QUEUE];  
 int queue_start = 0;  
 int queue_end = 0;  
-int queue_size = 0;    
+int queue_size = 0;   
+
 **On enqueue:**  
 
 request_queue[queue_end].clientfd = clientfd;  
@@ -81,6 +81,6 @@ about supporting other methods, serving more file types, etc.
 
 - Experiment with using mmap instead of using a cache list on the heap.
 
-- Prohibit files larger than 2 bytes from being cached (and then breaking everything...)
+- Instead of only caching the first 2 bytes of large files, do not cache them at all. (2 bytes is current arbitrary choice for max size).
 
 - Switch to port 80.
